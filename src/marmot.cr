@@ -15,7 +15,7 @@ module Marmot
     getter tick = Channel(Task).new
 
     # :nodoc:
-    abstract def start : Nil
+    abstract def wait_next_tick : Nil
 
     # Cancels the task.
     #
@@ -34,20 +34,12 @@ module Marmot
       @callback.call(self)
     rescue
     end
-  end
 
-  class Repeat < Task
-    def initialize(@span : Time::Span, @first_run : Bool, @callback : Callback)
-    end
-
+    # :nodoc:
     def start : Nil
       spawn do
         while !canceled?
-          if @first_run
-            @first_run = false
-          else
-            sleep @span
-          end
+          wait_next_tick
 
           # The task could have been canceled while we were sleeping.
           if !canceled?
@@ -60,17 +52,12 @@ module Marmot
     end
   end
 
-  class Cron < Task
+  class CronTask < Task
     def initialize(@hour : Int32, @minute : Int32, @second : Int32, @callback : Callback)
     end
 
-    def start : Nil
-      spawn do
-        while !@canceled
-          sleep span
-          @tick.send(self)
-        end
-      end
+    def wait_next_tick : Nil
+      sleep span
     end
 
     private def span
@@ -99,21 +86,60 @@ module Marmot
     end
   end
 
+  class OnChannelTask(T) < Task
+    getter value : T? = nil
+
+    def initialize(@channel : Channel(T), @callback : Callback)
+    end
+
+    def wait_next_tick : Nil
+      @value = @channel.receive?
+    end
+  end
+
+  class RepeatTask < Task
+    def initialize(@span : Time::Span, @first_run : Bool, @callback : Callback)
+    end
+
+    def wait_next_tick : Nil
+      if @first_run
+        @first_run = false
+      else
+        sleep @span
+      end
+    end
+  end
+
   extend self
+
+  # Runs a task every day at *hour* and *minute*.
+  def cron(hour, minute, second = 0, &block : Callback) : Task
+    task = CronTask.new(hour, minute, second, block)
+    @@tasks << task
+    task
+  end
+
+  # Runs a task when a value is received on a channel.
+  #
+  # To access the value, you need to restrict the type of the task, and use
+  # `OnChannelTask#value`.
+  #
+  # ```
+  # channel = Channel(Int32).new
+  # Marmot.on(channel) { |task| puts task.as(OnChannelTask).value }
+  # ```
+  def on(channel, &block : Callback) : Task
+    task = OnChannelTask.new(channel, block)
+    @@tasks << task
+    task
+  end
 
   # Runs a task every given *span*.
   #
   # If first run is true, it will run as soon as the scheduler runs.
   # Else it will wait *span* time, then run a first time.
   def repeat(span : Time::Span, first_run = false, &block : Callback) : Task
-    task = Repeat.new(span, first_run, block)
-    @@tasks << task
-    task
-  end
-
-  # Runs a task every day at *hour* and *minute*.
-  def cron(hour, minute, second = 0, &block : Callback) : Task
-    task = Cron.new(hour, minute, second, block)
+    task = RepeatTask.new(span, first_run, block)
     @@tasks << task
     task
   end

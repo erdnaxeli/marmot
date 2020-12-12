@@ -97,6 +97,35 @@ describe Marmot do
     end
   end
 
+  describe "#on" do
+    it "schedules a new task that runs on messages on a channel" do
+      to_task = Channel(Int32).new
+      from_task = Channel(Int32).new
+
+      task = Marmot.on(to_task) do |t|
+        t = t.as(Marmot::OnChannelTask)
+        from_task.send(t.value.not_nil! * 2)
+        next
+      end
+      spawn Marmot.run
+
+      expect_channel_none(from_task)
+
+      to_task.send(1)
+      Fiber.yield
+      expect_channel_eq(from_task, 2)
+
+      to_task.send(42)
+      Fiber.yield
+      expect_channel_eq(from_task, 84)
+
+      task.cancel
+      to_task.send(1)
+      Fiber.yield
+      expect_channel_none(from_task)
+    end
+  end
+
   describe "#run" do
     it "runs a task without arguments" do
       channel = Channel(Int32).new
