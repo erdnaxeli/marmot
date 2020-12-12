@@ -5,7 +5,7 @@ def expect_channel_eq(channel, value)
   when x = channel.receive
     x.should eq(value)
   else
-    raise "A value was expected"
+    fail "#{value} was expected but nothing was received"
   end
 end
 
@@ -14,27 +14,40 @@ def expect_channel_be(channel, value)
   when x = channel.receive
     x.should be(value)
   else
-    raise "A value was expected"
+    fail "#{value} was expected but nothing was received"
+  end
+end
+
+def expect_channel_none(channel)
+  select
+  when x = channel.receive
+    fail "No value was expected but #{x} was received"
+  else
   end
 end
 
 describe Marmot do
+  after_each do
+    Marmot.stop
+    Marmot.cancel_all_tasks
+  end
+
   describe "#repeat" do
     it "schedules a new task that repeats" do
       channel = Channel(Int32).new
 
       x = 0
-      task = Marmot.repeat(10.milliseconds) do
+      task = Marmot.repeat(20.milliseconds) do
         x += 1
         channel.send(x)
       end
       spawn Marmot.run
 
-      sleep 15.milliseconds
+      sleep 30.milliseconds
       expect_channel_eq(channel, 1)
-      sleep 10.milliseconds
+      sleep 20.milliseconds
       expect_channel_eq(channel, 2)
-      sleep 10.milliseconds
+      sleep 20.milliseconds
       expect_channel_eq(channel, 3)
 
       task.cancel
@@ -55,6 +68,12 @@ describe Marmot do
       sleep 5.milliseconds
       expect_channel_eq(channel, 1)
 
+      sleep 1.milliseconds
+      expect_channel_none(channel)
+
+      sleep 5.milliseconds
+      expect_channel_eq(channel, 2)
+
       task.cancel
       channel.close
       Marmot.stop
@@ -69,7 +88,7 @@ describe Marmot do
       task = Marmot.cron(time.hour, time.minute, time.second) { channel.send(1) }
       spawn Marmot.run
 
-      sleep (time - Time.local + 5.milliseconds)
+      sleep (time - Time.local + 10.milliseconds)
       expect_channel_eq(channel, 1)
 
       task.cancel

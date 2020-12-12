@@ -44,7 +44,7 @@ module Marmot
       spawn do
         while !canceled?
           if @first_run
-            @first_rune = false
+            @first_run = false
           else
             sleep @span
           end
@@ -116,6 +116,11 @@ module Marmot
     task = Cron.new(hour, minute, second, block)
     @@tasks << task
     task
+  end
+
+  # Cancels all the tasks.
+  def cancel_all_tasks : Nil
+    @@tasks.each { |t| t.cancel }
   end
 
   # Starts scheduling the tasks.
