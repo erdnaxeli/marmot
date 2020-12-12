@@ -1,6 +1,6 @@
 # Marmot is a scheduler, use it to schedule tasks.
 module Marmot
-  VERSION = "0.1.1"
+  VERSION = "0.2.0"
 
   alias Callback = Proc(Task, Nil)
 
