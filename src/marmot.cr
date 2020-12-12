@@ -12,10 +12,7 @@ module Marmot
     @canceled = false
     @callback : Callback = ->(t : Task) {}
 
-    getter tick = Channel(Task).new
-
-    # :nodoc:
-    abstract def wait_next_tick : Nil
+    protected getter tick = Channel(Task).new
 
     # Cancels the task.
     #
@@ -29,14 +26,12 @@ module Marmot
       @canceled
     end
 
-    # :nodoc:
-    def run : Nil
+    protected def run : Nil
       @callback.call(self)
     rescue
     end
 
-    # :nodoc:
-    def start : Nil
+    protected def start : Nil
       spawn do
         while !canceled?
           wait_next_tick
@@ -50,13 +45,15 @@ module Marmot
         @tick.close
       end
     end
+
+    private abstract def wait_next_tick : Nil
   end
 
   class CronTask < Task
     def initialize(@hour : Int32, @minute : Int32, @second : Int32, @callback : Callback)
     end
 
-    def wait_next_tick : Nil
+    protected def wait_next_tick : Nil
       sleep span
     end
 
@@ -87,13 +84,21 @@ module Marmot
   end
 
   class OnChannelTask(T) < Task
+    # Gets the value received on the channel.
+    #
+    # If the channel is closed while waiting, a `nil` value will saved here, and
+    # the task will run one last time.
     getter value : T? = nil
 
     def initialize(@channel : Channel(T), @callback : Callback)
     end
 
-    def wait_next_tick : Nil
-      @value = @channel.receive?
+    protected def wait_next_tick : Nil
+      if @channel.closed?
+        cancel
+      else
+        @value = @channel.receive?
+      end
     end
   end
 
@@ -101,7 +106,7 @@ module Marmot
     def initialize(@span : Time::Span, @first_run : Bool, @callback : Callback)
     end
 
-    def wait_next_tick : Nil
+    protected def wait_next_tick : Nil
       if @first_run
         @first_run = false
       else
