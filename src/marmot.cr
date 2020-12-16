@@ -1,3 +1,5 @@
+require "log"
+
 # Marmot is a scheduler, use it to schedule tasks.
 module Marmot
   VERSION = "0.2.0"
@@ -28,7 +30,9 @@ module Marmot
 
     protected def run : Nil
       @callback.call(self)
-    rescue
+    rescue ex : Exception
+      self.cancel
+      Log.error(exception: ex) { "An error occurred in task #{self}. The task have been canceled."}
     end
 
     protected def start : Nil
@@ -178,7 +182,11 @@ module Marmot
       if m.is_a?(Task)
         m.run
       end
+
       remove_canceled_tasks
+      if @@tasks.size == 0
+        break
+      end
     end
   end
 
