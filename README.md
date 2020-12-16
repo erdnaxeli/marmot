@@ -2,6 +2,8 @@
 
 Marmot is a scheduler, use it to schedule tasks.
 
+The most detailled documentation is [the api doc](https://erdnaxeli.github.io/marmot/Marmot.html).
+
 ## Installation
 
 1. Add the dependency to your `shard.yml`:
