@@ -60,7 +60,7 @@ module Marmot
       @callback.call(self)
     rescue ex : Exception
       self.cancel
-      Log.error(exception: ex) { "An error occurred in task #{self}. The task have been canceled."}
+      Log.error(exception: ex) { "An error occurred in task #{self}. The task have been canceled." }
     end
 
     protected def start : Nil
