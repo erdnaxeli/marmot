@@ -1,6 +1,34 @@
 require "log"
 
-# Marmot is a scheduler, use it to schedule tasks.
+# Marmot is a non concurrent scheduler.
+#
+# Marmot schedules tasks on three possibles ways:
+# * on a periodic span (`Marmot.repeat`)
+# * every day at a given time (`Marmot.cron`)
+# * when a value is available on a channel (`Marmot.on`)
+#
+# Tasks are all executed on the same fiber.
+# This means two things: first, you don't have to worry about concurrency
+# (your tasks can share objects which does not support concurrency, like
+# `HTTP::Client`), and second, they must not block (too much).
+# If you want to execute jobs concurrently, you must spawn a new fiber inside your
+# tasks.
+#
+# A task receive a unique parameter which is an object representing itself.
+# It can be canceled with `Marmot::Task#cancel`, from inside or outside the task.
+# A canceled task can never be started again.
+#
+# Tasks do not start when created.
+# Instead, the main entrypoint is `Marmot.run`, which blocks while there are tasks
+# to run. If there is no tasks to run, or they are all canceled, it stops.
+#
+# The blocking behavior can also be stopped by calling `Marmot.stop`.
+# As `Marmot.run` is blocking, you probably want to call `Marmot.stop` from a task
+# or from another fiber.
+#
+# When stopped, the tasks are not canceled and they will run again if `Marmot.run`
+# is called again.
+# To cancel all the tasks there is `Marmot.cancel_all_tasks`.
 module Marmot
   VERSION = "0.2.0"
 
@@ -146,7 +174,7 @@ module Marmot
   # Runs a task every given *span*.
   #
   # If first run is true, it will run as soon as the scheduler runs.
-  # Else it will wait *span* time, then run a first time.
+  # Else it will wait *span* time before running for first time.
   def repeat(span : Time::Span, first_run = false, &block : Callback) : Task
     task = RepeatTask.new(span, first_run, block)
     @@tasks << task
@@ -160,7 +188,7 @@ module Marmot
 
   # Starts scheduling the tasks.
   #
-  # This blocks until `#stop` is called.
+  # This blocks until `#stop` is called or all tasks are cancelled.
   def run : Nil
     @@stopped = false
     @@stop_channel = Channel(Nil).new
