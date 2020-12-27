@@ -43,6 +43,10 @@ end
 Marmot.run
 ```
 
+### Debug
+
+You can set the env var `MARMOT_DEBUG` to any value to make marmot outputs debug logs.
+
 ## Development
 
 Don't forget to run the test.
