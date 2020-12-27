@@ -32,6 +32,20 @@ describe Marmot do
     Marmot.cancel_all_tasks
   end
 
+  describe "#at" do
+    it "schedules a new task a the given time" do
+      now = Time.local
+      time = now + 10.milliseconds
+
+      Marmot.at(time) { now = Time.local }
+      spawn Marmot.run
+
+      sleep 15.milliseconds
+      (now - time).should be_close(0.millisecond, 3.millisecond)
+      Marmot.stop
+    end
+  end
+
   describe "#repeat" do
     it "schedules a new task that repeats" do
       channel = Channel(Int32).new
@@ -187,7 +201,7 @@ describe Marmot do
       channel.close
     end
 
-    it "runs new task when added while already running", focus: true do
+    it "runs new task when added while already running" do
       channel = Channel(Int32).new
 
       Marmot.repeat(2.milliseconds) do |task|
