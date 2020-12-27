@@ -30,7 +30,7 @@ require "log"
 # is called again.
 # To cancel all the tasks there is `Marmot.cancel_all_tasks`.
 module Marmot
-  VERSION = "0.2.1"
+  VERSION = "0.2.2"
 
   alias Callback = Proc(Task, Nil)
 
