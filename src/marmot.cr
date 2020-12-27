@@ -162,6 +162,10 @@ module Marmot
 
   private def add_task(task : Task) : Task
     @@tasks << task
+    if @@running
+      task.start
+    end
+
     task
   end
 
@@ -221,7 +225,6 @@ module Marmot
       begin
         task = Channel.receive_first([@@stop_channel] + @@tasks.map(&.tick))
       rescue Channel::ClosedError
-        Log.debug { "Marmot stopped" }
         break
       end
 
@@ -235,11 +238,14 @@ module Marmot
         break
       end
     end
+
+    @@running = false
   end
 
   # Stops scheduling the tasks.
   def stop
     if @@running
+      Log.debug { "Marmot stopped" }
       @@running = false
       @@stop_channel.close
     end

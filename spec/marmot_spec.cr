@@ -186,6 +186,22 @@ describe Marmot do
       expect_channel_eq(channel, 1)
       channel.close
     end
+
+    it "runs new task when added while already running", focus: true do
+      channel = Channel(Int32).new
+
+      Marmot.repeat(2.milliseconds) do |task|
+        task.cancel
+        Marmot.repeat(3.milliseconds) { channel.send(1) }
+      end
+
+      spawn Marmot.run
+
+      sleep 10.milliseconds
+      expect_channel_eq(channel, 1)
+      channel.close
+      Marmot.stop
+    end
   end
 
   describe "#stop" do
