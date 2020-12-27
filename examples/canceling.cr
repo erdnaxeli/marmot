@@ -2,7 +2,7 @@ require "random"
 
 require "../src/marmot"
 
-Marmot.repeat(2.seconds) do |task|
+Marmot.every(2.seconds) do |task|
   value = Random.rand(10)
   puts "New value is #{value}"
 

@@ -3,7 +3,7 @@ require "random"
 
 require "../src/marmot"
 
-Marmot.repeat(3.seconds) do |task|
+Marmot.every(3.seconds) do |task|
   value = Random.rand(10)
   if value == 0
     Log.info { "New value is #{value}, cancelling myself" }
@@ -34,7 +34,7 @@ Marmot.on(channel_pong) do |task|
   end
 end
 
-Marmot.repeat(1.5.seconds) do
+Marmot.every(1.5.seconds) do
   if Random.rand(10) == 0
     raise "I don't want to live on this planet anymore"
   else
@@ -42,8 +42,8 @@ Marmot.repeat(1.5.seconds) do
   end
 end
 
-Marmot.repeat(5.second) { Log.info { "Hi" } }
-Marmot.cron(hour: 4, minute: 25) { puts "It is 4:25 pm" }
+Marmot.every(5.second) { Log.info { "Hi" } }
+Marmot.every(:day, hour: 4, minute: 25) { puts "It is 4:25 pm" }
 
 channel_ping.send("ping")
 

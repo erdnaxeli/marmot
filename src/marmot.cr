@@ -32,6 +32,11 @@ require "./tasks"
 # When stopped, the tasks are not canceled and they will run again if `Marmot.run`
 # is called again.
 # To cancel all the tasks there is `Marmot.cancel_all_tasks`.
+#
+# If the computer's clock changes, the tasks scheduled on a specific time will
+# *not* be scheduled again.
+# Their next runs will be triggered at the time before the clock changes, but the
+# next ones will be correctly scheduled.
 module Marmot
   VERSION = "0.2.2"
 
@@ -58,10 +63,25 @@ module Marmot
     add_task AtTask.new(time, block)
   end
 
-  # Runs a task every day at *hour* and *minute*.
-  def cron(hour, minute, second = 0, &block : Callback) : Task
+  # Runs a task every given *span*.
+  #
+  # If first run is true, it will run as soon as the scheduler runs.
+  # Else it will wait *span* time before running for first time.
+  def every(span : Time::Span, first_run = false, &block : Callback) : Task
+    Log.debug { "New task to repeat every #{span}" }
+    add_task RepeatTask.new(span, first_run, block)
+  end
+
+  # Runs a task every *span* at *hour* and *minute*.
+  #
+  # ```
+  # Marmot.every(:day, hour: 15) { ... }  # will run every day at 15:00:00
+  # Marmot.every(:month, day: 15) { ... } # will run every month at midnight
+  # Marmot.every(:month, day: 31) { ... } # will run every month THAT HAVE a 31th day at midnight
+  # ```
+  def every(span : Symbol, *, day = 1, hour = 0, minute = 0, second = 0, &block : Callback) : Task
     Log.debug { "New task to run every day at #{hour}:#{minute}:#{second}" }
-    add_task CronTask.new(hour, minute, second, block)
+    add_task CronTask.new(span, day, hour, minute, second, block)
   end
 
   # Runs a task when a value is received on a channel.
@@ -76,15 +96,6 @@ module Marmot
   def on(channel, &block : Callback) : Task
     Log.debug { "New task to run on message on #{channel}" }
     add_task OnChannelTask.new(channel, block)
-  end
-
-  # Runs a task every given *span*.
-  #
-  # If first run is true, it will run as soon as the scheduler runs.
-  # Else it will wait *span* time before running for first time.
-  def repeat(span : Time::Span, first_run = false, &block : Callback) : Task
-    Log.debug { "New task to repeat every #{span}" }
-    add_task RepeatTask.new(span, first_run, block)
   end
 
   # Cancels all the tasks.

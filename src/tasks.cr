@@ -65,7 +65,10 @@ module Marmot
   end
 
   class CronTask < Task
-    def initialize(@hour : Int32, @minute : Int32, @second : Int32, @callback : Callback)
+    def initialize(@span : Symbol, @day : Int32, @hour : Int32, @minute : Int32, @second : Int32, @callback : Callback)
+      if !{:minute, :hour, :day, :month}.includes?(@span)
+        raise "Unknown span #{@span}"
+      end
     end
 
     protected def wait_next_tick : Nil
@@ -76,25 +79,66 @@ module Marmot
       # We want the next minute, we skip the current one.
       time = Time.local.at_beginning_of_second + 1.second
 
-      if time.second < @second
-        time += (@second - time.second).second
-      elsif time.second > @second
-        time += (60 - time.second + @second).second
+      time = adjust_second(time)
+      if @span == :minute
+        return time - Time.local
       end
 
-      if time.minute < @minute
-        time += (@minute - time.minute).minute
-      elsif time.minute > @minute
-        time += (60 - time.minute + @minute).minute
+      time = adjust_minute(time)
+      if @span == :hour
+        return time - Time.local
       end
 
-      if time.hour < @hour
-        time += (@hour - time.hour).hour
-      elsif time.hour > @hour
-        time += (24 - time.hour + @hour).hour
+      time = adjust_hour(time)
+      if @span == :day
+        return time - Time.local
       end
 
+      time = adjust_day(time)
       time - Time.local
+    end
+
+    private def adjust_second(time)
+      if time.second < @second
+        time + (@second - time.second).second
+      elsif time.second > @second
+        time + (60 - time.second + @second).second
+      else
+        time
+      end
+    end
+
+    private def adjust_minute(time)
+      if time.minute < @minute
+        time + (@minute - time.minute).minute
+      elsif time.minute > @minute
+        time + (60 - time.minute + @minute).minute
+      else
+        time
+      end
+    end
+
+    private def adjust_hour(time)
+      if time.hour < @hour
+        time + (@hour - time.hour).hour
+      elsif time.hour > @hour
+        time + (24 - time.hour + @hour).hour
+      else
+        time
+      end
+    end
+
+    private def adjust_day(time)
+      if time.day < @day
+        time + (@day - time.day).day
+      elsif time.day > @day
+        while time.day != @day
+          time += 1.day
+        end
+        time
+      else
+        time
+      end
     end
   end
 

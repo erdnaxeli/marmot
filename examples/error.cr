@@ -1,6 +1,6 @@
 require "../src/marmot"
 
-Marmot.repeat(2.seconds) do
+Marmot.every(2.seconds) do
   puts "Task running"
   raise "I don't want to live on this planet anymore"
 end

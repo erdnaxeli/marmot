@@ -46,12 +46,12 @@ describe Marmot do
     end
   end
 
-  describe "#repeat" do
-    it "schedules a new task that repeats" do
+  describe "#every(span)" do
+    it "schedules a new task that repeats given" do
       channel = Channel(Int32).new
 
       x = 0
-      task = Marmot.repeat(20.milliseconds) do
+      task = Marmot.every(20.milliseconds) do
         x += 1
         channel.send(x)
       end
@@ -73,7 +73,7 @@ describe Marmot do
       channel = Channel(Int32).new
 
       x = 0
-      task = Marmot.repeat(10.milliseconds, true) do
+      task = Marmot.every(10.milliseconds, true) do
         x += 1
         channel.send(x)
       end
@@ -94,12 +94,12 @@ describe Marmot do
     end
   end
 
-  describe "#cron" do
+  describe "#every(span, day, hour, minutes, seconds)" do
     it "schedules a new task" do
       channel = Channel(Int32).new
 
       time = Time.local.at_beginning_of_second + 2.second
-      task = Marmot.cron(time.hour, time.minute, time.second) { channel.send(1) }
+      task = Marmot.every(:day, hour: time.hour, minute: time.minute, second: time.second) { channel.send(1) }
       spawn Marmot.run
 
       sleep (time - Time.local + 10.milliseconds)
@@ -144,7 +144,7 @@ describe Marmot do
     it "runs a task without arguments" do
       channel = Channel(Int32).new
 
-      task = Marmot.repeat(3.milliseconds) { channel.send(1) }
+      task = Marmot.every(3.milliseconds) { channel.send(1) }
       spawn Marmot.run
 
       sleep 5.milliseconds
@@ -158,7 +158,7 @@ describe Marmot do
     it "runs a task with one argument and gives it its Task object" do
       channel = Channel(Marmot::Task).new
 
-      task = Marmot.repeat(3.milliseconds) { |t| channel.send(t) }
+      task = Marmot.every(3.milliseconds) { |t| channel.send(t) }
       spawn Marmot.run
 
       sleep 5.milliseconds
@@ -172,7 +172,7 @@ describe Marmot do
     it "stops canceled tasks" do
       channel = Channel(Marmot::Task).new
 
-      task = Marmot.repeat(3.milliseconds) do |t|
+      task = Marmot.every(3.milliseconds) do |t|
         t.cancel
         channel.close
       end
@@ -188,7 +188,7 @@ describe Marmot do
     it "does not run when there is no tasks" do
       channel = Channel(Int32).new
 
-      task = Marmot.repeat(1.milliseconds) { }
+      task = Marmot.every(1.milliseconds) { }
       task.cancel
 
       spawn do
@@ -204,9 +204,9 @@ describe Marmot do
     it "runs new task when added while already running" do
       channel = Channel(Int32).new
 
-      Marmot.repeat(2.milliseconds) do |task|
+      Marmot.every(2.milliseconds) do |task|
         task.cancel
-        Marmot.repeat(3.milliseconds) { channel.send(1) }
+        Marmot.every(3.milliseconds) { channel.send(1) }
       end
 
       spawn Marmot.run
@@ -222,7 +222,7 @@ describe Marmot do
     it "stops the tasks but does not cancel them" do
       channel = Channel(Int32).new
 
-      task = Marmot.repeat(10.milliseconds) { channel.send(1) }
+      task = Marmot.every(10.milliseconds) { channel.send(1) }
       spawn do
         Marmot.run
         channel.send(2)
