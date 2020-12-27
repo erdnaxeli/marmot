@@ -34,11 +34,18 @@ module Marmot
 
   alias Callback = Proc(Task, Nil)
 
+  Log = ::Log.for(self)
+  if level = ENV["MARMOT_DEBUG"]?
+    Log.level = ::Log::Severity::Debug
+  end
+
   @@tasks = Array(Task).new
-  @@stopped = true
+  @@running = false
   @@stop_channel = Channel(Nil).new
 
   abstract class Task
+    Log = Marmot::Log.for(self, Marmot::Log.level)
+
     @canceled = false
     @callback : Callback = ->(t : Task) {}
 
@@ -48,6 +55,7 @@ module Marmot
     #
     # A canceled task cannot be uncanceled.
     def cancel
+      Log.debug { "Task #{self} canceled" }
       @canceled = true
     end
 
@@ -135,6 +143,8 @@ module Marmot
   end
 
   class RepeatTask < Task
+    Log = Task::Log.for(self, Task::Log.level)
+
     def initialize(@span : Time::Span, @first_run : Bool, @callback : Callback)
     end
 
@@ -142,6 +152,7 @@ module Marmot
       if @first_run
         @first_run = false
       else
+        Log.debug { "Task #{self} sleeping #{@span}" }
         sleep @span
       end
     end
@@ -149,11 +160,15 @@ module Marmot
 
   extend self
 
-  # Runs a task every day at *hour* and *minute*.
-  def cron(hour, minute, second = 0, &block : Callback) : Task
-    task = CronTask.new(hour, minute, second, block)
+  private def add_task(task : Task) : Task
     @@tasks << task
     task
+  end
+
+  # Runs a task every day at *hour* and *minute*.
+  def cron(hour, minute, second = 0, &block : Callback) : Task
+    Log.debug { "New task to run every day at #{hour}:#{minute}:#{second}" }
+    add_task CronTask.new(hour, minute, second, block)
   end
 
   # Runs a task when a value is received on a channel.
@@ -166,9 +181,8 @@ module Marmot
   # Marmot.on(channel) { |task| puts task.as(OnChannelTask).value }
   # ```
   def on(channel, &block : Callback) : Task
-    task = OnChannelTask.new(channel, block)
-    @@tasks << task
-    task
+    Log.debug { "New task to run on message on #{channel}" }
+    add_task OnChannelTask.new(channel, block)
   end
 
   # Runs a task every given *span*.
@@ -176,9 +190,8 @@ module Marmot
   # If first run is true, it will run as soon as the scheduler runs.
   # Else it will wait *span* time before running for first time.
   def repeat(span : Time::Span, first_run = false, &block : Callback) : Task
-    task = RepeatTask.new(span, first_run, block)
-    @@tasks << task
-    task
+    Log.debug { "New task to repeat every #{span}" }
+    add_task RepeatTask.new(span, first_run, block)
   end
 
   # Cancels all the tasks.
@@ -190,25 +203,31 @@ module Marmot
   #
   # This blocks until `#stop` is called or all tasks are cancelled.
   def run : Nil
-    @@stopped = false
+    Log.debug { "Marmot running" }
+
+    @@running = true
     @@stop_channel = Channel(Nil).new
     remove_canceled_tasks
 
     if @@tasks.size == 0
+      Log.debug { "No task to run! Stopping." }
       return
     end
 
     @@tasks.map(&.start)
 
-    while !@@stopped
+    while @@running
+      Log.debug { "Waiting for a task to run among #{@@tasks.size} tasks" }
       begin
-        m = Channel.receive_first([@@stop_channel] + @@tasks.map(&.tick))
+        task = Channel.receive_first([@@stop_channel] + @@tasks.map(&.tick))
       rescue Channel::ClosedError
+        Log.debug { "Marmot stopped" }
         break
       end
 
-      if m.is_a?(Task)
-        m.run
+      if task.is_a?(Task)
+        Log.debug { "Running task #{task}" }
+        task.run
       end
 
       remove_canceled_tasks
@@ -220,8 +239,8 @@ module Marmot
 
   # Stops scheduling the tasks.
   def stop
-    if !@@stopped
-      @@stopped = true
+    if @@running
+      @@running = false
       @@stop_channel.close
     end
   end
