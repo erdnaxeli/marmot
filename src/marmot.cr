@@ -81,7 +81,7 @@ module Marmot
   # Marmot.every(:month, day: 31) { ... } # will run every month THAT HAVE a 31th day at midnight
   # ```
   def every(span : Symbol, *, day = 1, hour = 0, minute = 0, second = 0, &block : Callback) : Task
-    Log.debug { "New task to run every day at #{hour}:#{minute}:#{second}" }
+    Log.debug { "New task to run every #{span} at #{hour}:#{minute}:#{second}" }
     add_task CronTask.new(span, day, hour, minute, second, block)
   end
 
@@ -126,6 +126,8 @@ module Marmot
       begin
         task = Channel.receive_first([@@stop_channel] + @@tasks.map(&.tick))
       rescue Channel::ClosedError
+        remove_canceled_tasks
+        next
       end
 
       if task.is_a?(Task)

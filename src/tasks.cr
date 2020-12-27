@@ -143,20 +143,42 @@ module Marmot
   end
 
   class OnChannelTask(T) < Task
+    @closing = false
+    @has_run = Channel(Nil).new(1)
+
     # Gets the value received on the channel.
     #
-    # If the channel is closed while waiting, a `nil` value will saved here, and
-    # the task will run one last time.
+    # If the channel is closed a `nil` value will saved here, and the task will
+    # run one last time.
     getter value : T? = nil
 
     def initialize(@channel : Channel(T), @callback : Callback)
+      # Initialize the first run
+      @has_run.send(nil)
+    end
+
+    protected def run : Nil
+      super
+      @has_run.send(nil)
     end
 
     protected def wait_next_tick : Nil
-      if @channel.closed?
+      # We wait until the task runs, because we don't want to skip received values.
+      @has_run.receive
+      if @closing
         cancel
+        @has_run.close
+      elsif @channel.closed?
+        # We want to run the task one last time.
+        @closing = true
+        @value = nil
       else
-        @value = @channel.receive?
+        begin
+          @value = @channel.receive
+        rescue Channel::ClosedError
+          @value = nil
+          @closing = true
+        end
       end
     end
   end

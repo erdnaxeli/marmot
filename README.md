@@ -21,22 +21,32 @@ The most detailled documentation is [the api doc](https://erdnaxeli.github.io/ma
 ```crystal
 require "marmot"
 
-repetitions
-
 # This task will repeat every 15 minutes.
-repeat_task = Marmot.repeat(15.minutes) { puts Time.local }
+repeat_task = Marmot.every(15.minutes) { puts Time.local }
 # This task will run every day at 15:28:43, and will cancel the previous task.
-Marmot.cron(hour: 15, minute: 28, second: 43) do
+Marmot.every(:day, hour: 15, minute: 28, second: 43) do
   puts "It is 15:28:43: #{Time.local}"
   repeat_task.cancel
 end
 
 times = 0
+channel = Channel(String).new
 # This task will run every 10 seconds and will cancel itself after 10 runs.
-Marmot.repeat(10.seconds) do |task|
+Marmot.every(10.seconds) do |task|
   times += 1
-  puts "#{times} times"
-  task.cancel if times = 10
+  channel.send("#{times} times")
+  if times == 10
+    task.cancel
+    channel.close
+  end
+end
+
+Marmot.on(channel) do |task|
+  if value = task.as(Marmot::OnChannelTask).value
+    puts value
+  else
+    puts "The task was canceled"
+  end
 end
 
 # Start the scheduler.
