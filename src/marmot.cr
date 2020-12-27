@@ -38,7 +38,7 @@ require "./tasks"
 # Their next runs will be triggered at the time before the clock changes, but the
 # next ones will be correctly scheduled.
 module Marmot
-  VERSION = "0.3.0"
+  VERSION = "0.3.1"
 
   alias Callback = Proc(Task, Nil)
 

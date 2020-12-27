@@ -134,22 +134,32 @@
 
 <pre><code class="language-crystal"><span class="k">require</span> <span class="s">&quot;marmot&quot;</span>
 
-repetitions
-
 <span class="c"># This task will repeat every 15 minutes.</span>
-repeat_task <span class="o">=</span> <span class="t">Marmot</span>.repeat(<span class="n">15</span>.minutes) { puts <span class="t">Time</span>.local }
+repeat_task <span class="o">=</span> <span class="t">Marmot</span>.every(<span class="n">15</span>.minutes) { puts <span class="t">Time</span>.local }
 <span class="c"># This task will run every day at 15:28:43, and will cancel the previous task.</span>
-<span class="t">Marmot</span>.cron(hour: <span class="n">15</span>, minute: <span class="n">28</span>, second: <span class="n">43</span>) <span class="k">do</span>
+<span class="t">Marmot</span>.every(<span class="n">:day</span>, hour: <span class="n">15</span>, minute: <span class="n">28</span>, second: <span class="n">43</span>) <span class="k">do</span>
   puts <span class="s">&quot;It is 15:28:43: </span><span class="i">#{</span><span class="t">Time</span>.local<span class="i">}</span><span class="s">&quot;</span>
   repeat_task.cancel
 <span class="k">end</span>
 
 times <span class="o">=</span> <span class="n">0</span>
+channel <span class="o">=</span> <span class="t">Channel</span>(<span class="t">String</span>).<span class="k">new</span>
 <span class="c"># This task will run every 10 seconds and will cancel itself after 10 runs.</span>
-<span class="t">Marmot</span>.repeat(<span class="n">10</span>.seconds) <span class="k">do</span> <span class="o">|</span>task<span class="o">|</span>
+<span class="t">Marmot</span>.every(<span class="n">10</span>.seconds) <span class="k">do</span> <span class="o">|</span>task<span class="o">|</span>
   times += <span class="n">1</span>
-  puts <span class="s">&quot;</span><span class="i">#{</span>times<span class="i">}</span><span class="s"> times&quot;</span>
-  task.cancel <span class="k">if</span> times <span class="o">=</span> <span class="n">10</span>
+  channel.send(<span class="s">&quot;</span><span class="i">#{</span>times<span class="i">}</span><span class="s"> times&quot;</span>)
+  <span class="k">if</span> times <span class="o">==</span> <span class="n">10</span>
+    task.cancel
+    channel.close
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="t">Marmot</span>.on(channel) <span class="k">do</span> <span class="o">|</span>task<span class="o">|</span>
+  <span class="k">if</span> value <span class="o">=</span> task.<span class="k">as</span>(<span class="t">Marmot</span><span class="t">::</span><span class="t">OnChannelTask</span>).value
+    puts value
+  <span class="k">else</span>
+    puts <span class="s">&quot;The task was canceled&quot;</span>
+  <span class="k">end</span>
 <span class="k">end</span>
 
 <span class="c"># Start the scheduler.</span>
