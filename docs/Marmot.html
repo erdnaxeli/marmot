@@ -56,6 +56,11 @@
       
         <ul>
   
+  <li class=" " data-id="marmot/Marmot/AtTask" data-name="marmot::attask">
+      <a href="Marmot/AtTask.html">AtTask</a>
+      
+    </li>
+  
   <li class=" " data-id="marmot/Marmot/Callback" data-name="marmot::callback">
       <a href="Marmot/Callback.html">Callback</a>
       
@@ -116,7 +121,7 @@
 
 <p>Marmot schedules tasks on three possibles ways:</p>
 
-<ul><li>on a periodic span (<code><a href="Marmot.html#repeat(span:Time::Span,first_run=false,&block:Callback):Task-instance-method">Marmot.repeat</a></code>)</li><li>every day at a given time (<code><a href="Marmot.html#cron(hour,minute,second=0,&block:Callback):Task-instance-method">Marmot.cron</a></code>)</li><li>when a value is available on a channel (<code><a href="Marmot.html#on(channel,&block:Callback):Task-instance-method">Marmot.on</a></code>)</li></ul>
+<ul><li>on a periodic span (<code>Marmot.repeat</code>)</li><li>every day at a given time (<code>Marmot.cron</code>)</li><li>when a value is available on a channel (<code><a href="Marmot.html#on(channel,&block:Callback):Task-instance-method">Marmot.on</a></code>)</li></ul>
 
 <p>Tasks are all executed on the same fiber.
 This means two things: first, you don't have to worry about concurrency
@@ -140,6 +145,11 @@ or from another fiber.</p>
 <p>When stopped, the tasks are not canceled and they will run again if <code><a href="Marmot.html#run:Nil-instance-method">Marmot.run</a></code>
 is called again.
 To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil-instance-method">Marmot.cancel_all_tasks</a></code>.</p>
+
+<p>If the computer's clock changes, the tasks scheduled on a specific time will
+<em>not</em> be scheduled again.
+Their next runs will be triggered at the time before the clock changes, but the
+next ones will be correctly scheduled.</p>
 
 
 
@@ -198,7 +208,7 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
       
     
       <dt class="entry-const" id="VERSION">
-        <strong>VERSION</strong> = <code><span class="s">&quot;0.2.2&quot;</span></code>
+        <strong>VERSION</strong> = <code><span class="s">&quot;0.3.0&quot;</span></code>
       </dt>
       
     
@@ -221,6 +231,13 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
   <ul class="list-summary">
     
       <li class="entry-summary">
+        <a href="#at(time:Time,&block:Callback):Task-instance-method" class="signature"><strong>#at</strong>(time : Time, &block : Callback) : Task</a>
+        
+          <div class="summary"><p>Runs a task once at a given time.</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
         <a href="#cancel_all_tasks:Nil-instance-method" class="signature"><strong>#cancel_all_tasks</strong> : Nil</a>
         
           <div class="summary"><p>Cancels all the tasks.</p></div>
@@ -228,9 +245,16 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
       </li>
     
       <li class="entry-summary">
-        <a href="#cron(hour,minute,second=0,&block:Callback):Task-instance-method" class="signature"><strong>#cron</strong>(hour, minute, second = <span class="n">0</span>, &block : Callback) : Task</a>
+        <a href="#every(span:Time::Span,first_run=false,&block:Callback):Task-instance-method" class="signature"><strong>#every</strong>(span : Time::Span, first_run = <span class="n">false</span>, &block : Callback) : Task</a>
         
-          <div class="summary"><p>Runs a task every day at <em>hour</em> and <em>minute</em>.</p></div>
+          <div class="summary"><p>Runs a task every given <em>span</em>.</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#every(span:Symbol,*,day=1,hour=0,minute=0,second=0,&block:Callback):Task-instance-method" class="signature"><strong>#every</strong>(span : Symbol, *, day = <span class="n">1</span>, hour = <span class="n">0</span>, minute = <span class="n">0</span>, second = <span class="n">0</span>, &block : Callback) : Task</a>
+        
+          <div class="summary"><p>Runs a task every <em>span</em> at the given <em>day</em>, <em>hour</em>, <em>minute</em> and <em>second</em>.</p></div>
         
       </li>
     
@@ -238,13 +262,6 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
         <a href="#on(channel,&block:Callback):Task-instance-method" class="signature"><strong>#on</strong>(channel, &block : Callback) : Task</a>
         
           <div class="summary"><p>Runs a task when a value is received on a channel.</p></div>
-        
-      </li>
-    
-      <li class="entry-summary">
-        <a href="#repeat(span:Time::Span,first_run=false,&block:Callback):Task-instance-method" class="signature"><strong>#repeat</strong>(span : Time::Span, first_run = <span class="n">false</span>, &block : Callback) : Task</a>
-        
-          <div class="summary"><p>Runs a task every given <em>span</em>.</p></div>
         
       </li>
     
@@ -286,6 +303,25 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
     Instance Method Detail
   </h2>
   
+    <div class="entry-detail" id="at(time:Time,&block:Callback):Task-instance-method">
+      <div class="signature">
+        
+        def <strong>at</strong>(time : Time, &block : <a href="Marmot/Callback.html">Callback</a>) : <a href="Marmot/Task.html">Task</a>
+
+        <a class="method-permalink" href="#at(time:Time,&block:Callback):Task-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Runs a task once at a given time.</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
     <div class="entry-detail" id="cancel_all_tasks:Nil-instance-method">
       <div class="signature">
         
@@ -305,17 +341,44 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
       </div>
     </div>
   
-    <div class="entry-detail" id="cron(hour,minute,second=0,&block:Callback):Task-instance-method">
+    <div class="entry-detail" id="every(span:Time::Span,first_run=false,&block:Callback):Task-instance-method">
       <div class="signature">
         
-        def <strong>cron</strong>(hour, minute, second = <span class="n">0</span>, &block : <a href="Marmot/Callback.html">Callback</a>) : <a href="Marmot/Task.html">Task</a>
+        def <strong>every</strong>(span : Time::Span, first_run = <span class="n">false</span>, &block : <a href="Marmot/Callback.html">Callback</a>) : <a href="Marmot/Task.html">Task</a>
 
-        <a class="method-permalink" href="#cron(hour,minute,second=0,&block:Callback):Task-instance-method">#</a>
+        <a class="method-permalink" href="#every(span:Time::Span,first_run=false,&block:Callback):Task-instance-method">#</a>
       </div>
       
         <div class="doc">
           
-          <p>Runs a task every day at <em>hour</em> and <em>minute</em>.</p>
+          <p>Runs a task every given <em>span</em>.</p>
+
+<p>If first run is true, it will run as soon as the scheduler runs.
+Else it will wait <em>span</em> time before running for first time.</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="every(span:Symbol,*,day=1,hour=0,minute=0,second=0,&block:Callback):Task-instance-method">
+      <div class="signature">
+        
+        def <strong>every</strong>(span : Symbol, *, day = <span class="n">1</span>, hour = <span class="n">0</span>, minute = <span class="n">0</span>, second = <span class="n">0</span>, &block : <a href="Marmot/Callback.html">Callback</a>) : <a href="Marmot/Task.html">Task</a>
+
+        <a class="method-permalink" href="#every(span:Symbol,*,day=1,hour=0,minute=0,second=0,&block:Callback):Task-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Runs a task every <em>span</em> at the given <em>day</em>, <em>hour</em>, <em>minute</em> and <em>second</em>.</p>
+
+<pre><code><span class="t">Marmot</span>.every(<span class="n">:hour</span>, hour: <span class="n">16</span>, minute: <span class="n">30</span>, second: <span class="n">30</span>)  <span class="c"># will run every hour at 30:30 (the hour parameter is ignored)</span>
+<span class="t">Marmot</span>.every(<span class="n">:day</span>, hour: <span class="n">15</span>) { ... }  <span class="c"># will run every day at 15:00:00</span>
+<span class="t">Marmot</span>.every(<span class="n">:month</span>, day: <span class="n">15</span>) { ... } <span class="c"># will run every month at midnight</span>
+<span class="t">Marmot</span>.every(<span class="n">:month</span>, day: <span class="n">31</span>) { ... } <span class="c"># will run every month THAT HAVE a 31th day at midnight</span></code></pre>
         </div>
       
       <br/>
@@ -341,28 +404,6 @@ To cancel all the tasks there is <code><a href="Marmot.html#cancel_all_tasks:Nil
 
 <pre><code>channel <span class="o">=</span> <span class="t">Channel</span>(<span class="t">Int32</span>).<span class="k">new</span>
 <span class="t">Marmot</span>.on(channel) { <span class="o">|</span>task<span class="o">|</span> puts task.<span class="k">as</span>(<span class="t">OnChannelTask</span>).value }</code></pre>
-        </div>
-      
-      <br/>
-      <div>
-        
-      </div>
-    </div>
-  
-    <div class="entry-detail" id="repeat(span:Time::Span,first_run=false,&block:Callback):Task-instance-method">
-      <div class="signature">
-        
-        def <strong>repeat</strong>(span : Time::Span, first_run = <span class="n">false</span>, &block : <a href="Marmot/Callback.html">Callback</a>) : <a href="Marmot/Task.html">Task</a>
-
-        <a class="method-permalink" href="#repeat(span:Time::Span,first_run=false,&block:Callback):Task-instance-method">#</a>
-      </div>
-      
-        <div class="doc">
-          
-          <p>Runs a task every given <em>span</em>.</p>
-
-<p>If first run is true, it will run as soon as the scheduler runs.
-Else it will wait <em>span</em> time before running for first time.</p>
         </div>
       
       <br/>

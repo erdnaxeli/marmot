@@ -38,7 +38,7 @@ require "./tasks"
 # Their next runs will be triggered at the time before the clock changes, but the
 # next ones will be correctly scheduled.
 module Marmot
-  VERSION = "0.2.2"
+  VERSION = "0.3.0"
 
   alias Callback = Proc(Task, Nil)
 
@@ -72,9 +72,10 @@ module Marmot
     add_task RepeatTask.new(span, first_run, block)
   end
 
-  # Runs a task every *span* at *hour* and *minute*.
+  # Runs a task every *span* at the given *day*, *hour*, *minute* and *second*.
   #
   # ```
+  # Marmot.every(:hour, hour: 16, minute: 30, second: 30)  # will run every hour at 30:30 (the hour parameter is ignored)
   # Marmot.every(:day, hour: 15) { ... }  # will run every day at 15:00:00
   # Marmot.every(:month, day: 15) { ... } # will run every month at midnight
   # Marmot.every(:month, day: 31) { ... } # will run every month THAT HAVE a 31th day at midnight
