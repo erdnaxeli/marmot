@@ -11,8 +11,8 @@ require "./tasks"
 # * when a value is available on a channel (`Marmot.on`)
 #
 # Tasks are all executed on the same fiber.
-# This means two things: first, you don't have to worry about concurrency
-# (your tasks can share objects which does not support concurrency, like
+# This means two things: first, you don't have to worry about concurrency
+# (your tasks can share objects which do not support concurrency, like
 # `HTTP::Client`), and second, they must not block (too much).
 # If you want to execute jobs concurrently, you must spawn a new fiber inside your
 # tasks.
@@ -38,7 +38,7 @@ require "./tasks"
 # Their next runs will be triggered at the time before the clock changes, but the
 # next ones will be correctly scheduled.
 module Marmot
-  VERSION = "0.3.1"
+  VERSION = "0.4.0"
 
   alias Callback = Proc(Task, Nil)
 
@@ -75,10 +75,10 @@ module Marmot
   # Runs a task every *span* at the given *day*, *hour*, *minute* and *second*.
   #
   # ```
-  # Marmot.every(:hour, hour: 16, minute: 30, second: 30)  # will run every hour at 30:30 (the hour parameter is ignored)
-  # Marmot.every(:day, hour: 15) { ... }  # will run every day at 15:00:00
-  # Marmot.every(:month, day: 15) { ... } # will run every month at midnight
-  # Marmot.every(:month, day: 31) { ... } # will run every month THAT HAVE a 31th day at midnight
+  # Marmot.every(:hour, hour: 16, minute: 30, second: 30) # will run every hour at 30:30 (the hour parameter is ignored)
+  # Marmot.every(:day, hour: 15) { ... }                  # will run every day at 15:00:00
+  # Marmot.every(:month, day: 15) { ... }                 # will run every month at midnight
+  # Marmot.every(:month, day: 31) { ... }                 # will run every month THAT HAVE a 31th day at midnight
   # ```
   def every(span : Symbol, *, day = 1, hour = 0, minute = 0, second = 0, &block : Callback) : Task
     Log.debug { "New task to run every #{span} at #{hour}:#{minute}:#{second}" }
@@ -115,7 +115,7 @@ module Marmot
     remove_canceled_tasks
 
     if @@tasks.size == 0
-      Log.debug { "No task to run! Stopping." }
+      Log.debug { "No task to run! Stopping." }
       return
     end
 
